@@ -65,6 +65,16 @@ Now, based on the provided images and the object description: "{cap[0]['conversa
 # ===================================================================================================================================================================
 # ===================================================================================================================================================================
 
+# NO DESCRIPTION, ME
+question = f"""
+Provide a very detailed description of the object you see in the images. Focus on the relative positions of the parts of the object. Include as many details as possible. Focus only on the content of the images. Focus only on the foreground.
+"""
+
+# DESCRIPTION, ME
+question = f"""
+Provide a very detailed description of the object knowing that its caption is: "{gpt_basic_description}". Focus on the relative positions of the parts of the object. Include as many details as possible. Focus only on the content of the images. Focus only on the foreground.
+"""
+
 # NO DESCRIPTION, GEMINI 2.5 PRO
 question = """
 You are an expert image analyst. Your task is to provide a single, comprehensive, and detailed paragraph describing the scene presented in the following series of images.
