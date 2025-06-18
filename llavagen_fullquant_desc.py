@@ -1,6 +1,7 @@
 import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
+import json
 import random
 from transformers import AutoProcessor, LlavaForConditionalGeneration, BitsAndBytesConfig
 from transformers import pipeline
@@ -26,10 +27,29 @@ data_root = "media7link/gpt4point_test/"
 random_ids = ['ba341c4ce89647ea9f6996ec58e3eacf', 'f93bb826f374423681a4772a3c49c1df', 'f8a87e1da0d54ed285c60cf5dc3d77e7', '58cd445c1e0044dd8af2009d51b7be18', '05068915ce654951910e905e24e35d38', '5bd2cda8deb04409bd0b4272966be972', '99565b63b54d429f99526428639037bf', '05068915ce654951910e905e24e35d38', '569b72c271c44106a3caa51f7d32dcd6']
 body_html = ""
 
+
+def load_json(file_path):
+    with open(file_path, 'r') as file:
+        return json.load(file)
+
+def get_gpt_answer_by_object_id(data, object_id):
+    for item in data:
+        if item["object_id"] == object_id:
+            for conversation in item["conversations"]:
+                if conversation["from"] == "gpt":
+                    return conversation["value"]
+    return "Object ID not found."
+
+basic_object_description_path = "gpt4point_test_no_vec.json"
+gpt4point_basic_descriptions = load_json(basic_object_description_path)
+
+
 for i in range(len(random_ids)):
     images = [os.path.join(data_root, random_ids[i], img_name) for img_name in image_names]
+    
+    gpt_basic_description = get_gpt_answer_by_object_id(gpt4point_basic_descriptions, random_ids[i])
 
-    question = """
+    question = f"""
     You are a meticulous and precise visual analyst. Your task is to provide a single, factual, and objective paragraph describing the provided scene. Your description must be grounded exclusively in the visual information present in the images.
 
     ### Guiding Principles:
@@ -37,10 +57,14 @@ for i in range(len(random_ids)):
     2. No Speculation: Avoid making assumptions. If you are uncertain about a material, describe its visual properties (e.g., "a dark, textured wood") rather than guessing a specific type (e.g., "oak"). If you cannot identify an object with certainty, describe its shape and color.
     3. Literal and Unimaginative: Your goal is to be a camera, not a storyteller. Avoid creating a narrative or setting a mood. Stick to concrete, observable facts.
 
+    ### Reference Description:
+    You are provided with the following basic description to use as a starting point. This description identifies the main subject(s).
+    "{gpt_basic_description}"
+
     ### Task:
-    Based on the provided images and adhering strictly to the principles above, generate a single paragraph. This paragraph should describe the main objects, their key attributes (color, shape, material, texture), and their spatial relationships to one another. Focus on the primary subjects and their immediate surroundings. Omit details about the distant or out-of-focus background.
+    Using the Reference Description to identify the main subjects, your task is to expand upon it. Based on the provided images and adhering strictly to the Guiding Principles above, generate a single, more detailed paragraph. Your paragraph should describe the main objects identified in the reference, their key attributes (color, shape, material, texture), and their spatial relationships to one another. The image is your sole source of truth. Focus on the primary subjects and their immediate surroundings, omitting details about the background.
     
-    Generate the descriptive paragraph based only on what you can see.
+    Generate your detailed, single-paragraph description.
     """
 
     conversation = [
@@ -72,9 +96,11 @@ for i in range(len(random_ids)):
     images_html = ""
     for imagepath in images: images_html += f"""<img src="{imagepath}" style="width:200px;" alt="{imagepath}">\n"""
     output_html = f"""<pre class="pre-wrap">{model_response}</pre>"""
-    body_html += images_html + f"\n<p>ID: {random_ids[i]}</p>\n" + output_html + "\n"
+    body_html += images_html + f"""\n<pre class="pre-wrap">{gpt_basic_description}</pre>\n""" + f"\n<p>ID: {random_ids[i]}</p>\n" + output_html + "\n"
 
-full_html_path = "llava7_aug"
+full_html_path = "llava7_aug_desc"
+
+gpt_basic_description = "basic_description"
 
 full_html = f"""
 <!DOCTYPE html>
