@@ -24,7 +24,7 @@ llava_processor = AutoProcessor.from_pretrained(model_id)
 
 image_names = ['000.png', '010.png', '015.png', '020.png']
 data_root = "media7link/gpt4point_test/"
-random_ids = ['ba341c4ce89647ea9f6996ec58e3eacf', 'f93bb826f374423681a4772a3c49c1df', 'f8a87e1da0d54ed285c60cf5dc3d77e7', '58cd445c1e0044dd8af2009d51b7be18', '05068915ce654951910e905e24e35d38', '5bd2cda8deb04409bd0b4272966be972', '99565b63b54d429f99526428639037bf', '05068915ce654951910e905e24e35d38', '569b72c271c44106a3caa51f7d32dcd6']
+random_ids = ['ba341c4ce89647ea9f6996ec58e3eacf','8361ad3d183843e885f58d1c68720771','214671c96c5f49b2a1927d1638f0fb47','3674ea1aabf9458dadd8332872509749','e348789bde904c2c87b99aae573637e4','dec1bb1c2b85451183f33066311e73a8','d0e07b22f1d54b968943e7a896235a65','797a7dfd60534ac4956428496f2cdae1','44795759d6144f61990796c02088665f','1e488ff902e34e62affd7961c88293bb','98c29f77095b45a9ad0a4e3014d111c6','e68820e2d14a46a08e23070e28c84b7b','7c00eea07b004402ac5b63ace4b2b78f','c4a0c2e2fb624bc0af9928b0ae6407ff','44795759d6144f61990796c02088665f','73d7b6f9a0b7410b945205338b090566','44795759d6144f61990796c02088665f','d611fdfc1ce945de86fb319587c35cf1','7c00eea07b004402ac5b63ace4b2b78f','b18a7d6210ca466f9dd9ceb8e1675a58']
 body_html = ""
 
 
@@ -49,38 +49,22 @@ for i in range(len(random_ids)):
     
     gpt_basic_description = get_gpt_answer_by_object_id(gpt4point_basic_descriptions, random_ids[i])
 
-    question = f"""
-    You are a meticulous and precise scene decomposition engine. Your task is to analyze the provided images and output a structured description. Do not infer, guess, or assume any information not explicitly visible in the image.
+    question = f"""You are a meticulous and precise visual analyst. Your task is to provide a single, factual, and objective paragraph describing the provided scene. Your description must be grounded exclusively in the visual information present in the images.
 
-    You may optionally refer to a brief supplementary description that contains human-written notes about the image. However, your output must remain grounded in visual evidence only. Use the description solely to help you disambiguate or more precisely describe what is clearly visible.
+### Guiding Principles:
+1. Describe, Don't Interpret: Report only what you see. Do not infer actions, intentions, history, or the contents of containers if they are not clearly visible. For example, if a box is closed, state that it is closed; do not guess its contents.
+2. No Speculation: Avoid making assumptions. If you are uncertain about a material, describe its visual properties (e.g., "a dark, textured wood") rather than guessing a specific type (e.g., "oak"). If you cannot identify an object with certainty, describe its shape and color.
+3. Literal and Unimaginative: Your goal is to be a camera, not a storyteller. Avoid creating a narrative or setting a mood. Stick to concrete, observable facts.
 
-    Supplementary description: "{gpt_basic_description}"
+### Reference Description:
+You are provided with the following basic description to use as a starting point. This description identifies the main subject(s).
+"{gpt_basic_description}"
 
-    ### Output Format
+### Task:
+Using the Reference Description to identify the main subjects, your task is to expand upon it. Based on the provided images and adhering strictly to the Guiding Principles above, generate a single, more detailed paragraph. Your paragraph should describe the main objects identified in the reference, their key attributes (color, shape, material, texture), and their spatial relationships to one another. The image is your sole source of truth. Focus on the primary subjects and their immediate surroundings, omitting details about the background.
 
-    ### Object Inventory
-    List every distinct primary object in the foreground of the scene. Use precise terminology where possible (e.g., "armchair," "floor lamp," "coffee table").
-    - [Object 1 Name]
-    - [Object 2 Name]
-    - [Object 3 Name]
-    ...
-
-    ### Detailed Descriptions
-    For each object listed above, provide a detailed description of its attributes.
-    - **[Object 1 Name]:** [Describe color, shape, material, texture, state (e.g., new, dusty, chipped), and any visible text or logos. You may cross-reference `basic_desc` only if the details are visually verifiable.]
-    - **[Object 2 Name]:** [Describe its attributes.]
-    - **[Object 3 Name]:** [Describe its attributes.]
-    ...
-
-    ### Spatial Relationships
-    Describe the positions of the objects relative to each other and to the overall scene. Use clear and simple prepositions.
-    - [Object 1] is located [e.g., to the left of Object 2].
-    - [Object 3] is positioned [e.g., on top of the coffee table].
-    - The [e.g., stack of magazines] is placed [e.g., next to the armchair on the floor].
-    - All objects are resting on a surface that appears to be [describe the floor or ground surface].
-    
-    Generate your detailed, single-paragraph description.
-    """
+Generate the detailed, single-paragraph description.
+"""
 
     conversation = [
                     {
@@ -117,7 +101,7 @@ for i in range(len(random_ids)):
     output_html = f"""<pre class="pre-wrap">{model_response}</pre>"""
     body_html += images_html + f"""\n<pre class="pre-wrap">{gpt_basic_description}</pre>\n""" + f"\n<p>ID: {random_ids[i]}</p>\n" + output_html + "\n"
 
-full_html_path = "tmp"
+full_html_path = "llava7_desc"
 
 gpt_basic_description = "basic_description"
 
