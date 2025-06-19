@@ -50,19 +50,34 @@ for i in range(len(random_ids)):
     gpt_basic_description = get_gpt_answer_by_object_id(gpt4point_basic_descriptions, random_ids[i])
 
     question = f"""
-    You are a meticulous and precise visual analyst. Your task is to provide a single, factual, and objective paragraph describing the provided scene. Your description must be grounded exclusively in the visual information present in the images.
+    You are a meticulous and precise scene decomposition engine. Your task is to analyze the provided images and output a structured description. Do not infer, guess, or assume any information not explicitly visible in the image.
 
-    ### Guiding Principles:
-    1. Describe, Don't Interpret: Report only what you see. Do not infer actions, intentions, history, or the contents of containers if they are not clearly visible. For example, if a box is closed, state that it is closed; do not guess its contents.
-    2. No Speculation: Avoid making assumptions. If you are uncertain about a material, describe its visual properties (e.g., "a dark, textured wood") rather than guessing a specific type (e.g., "oak"). If you cannot identify an object with certainty, describe its shape and color.
-    3. Literal and Unimaginative: Your goal is to be a camera, not a storyteller. Avoid creating a narrative or setting a mood. Stick to concrete, observable facts.
+    You may optionally refer to a brief supplementary description that contains human-written notes about the image. However, your output must remain grounded in visual evidence only. Use the description solely to help you disambiguate or more precisely describe what is clearly visible.
 
-    ### Reference Description:
-    You are provided with the following basic description to use as a starting point. This description identifies the main subject(s).
-    "{gpt_basic_description}"
+    Supplementary description: "{gpt_basic_description}"
 
-    ### Task:
-    Using the Reference Description to identify the main subjects, your task is to expand upon it. Based on the provided images and adhering strictly to the Guiding Principles above, generate a single, more detailed paragraph. Your paragraph should describe the main objects identified in the reference, their key attributes (color, shape, material, texture), and their spatial relationships to one another. The image is your sole source of truth. Focus on the primary subjects and their immediate surroundings, omitting details about the background.
+    ### Output Format
+
+    ### Object Inventory
+    List every distinct primary object in the foreground of the scene. Use precise terminology where possible (e.g., "armchair," "floor lamp," "coffee table").
+    - [Object 1 Name]
+    - [Object 2 Name]
+    - [Object 3 Name]
+    ...
+
+    ### Detailed Descriptions
+    For each object listed above, provide a detailed description of its attributes.
+    - **[Object 1 Name]:** [Describe color, shape, material, texture, state (e.g., new, dusty, chipped), and any visible text or logos. You may cross-reference `basic_desc` only if the details are visually verifiable.]
+    - **[Object 2 Name]:** [Describe its attributes.]
+    - **[Object 3 Name]:** [Describe its attributes.]
+    ...
+
+    ### Spatial Relationships
+    Describe the positions of the objects relative to each other and to the overall scene. Use clear and simple prepositions.
+    - [Object 1] is located [e.g., to the left of Object 2].
+    - [Object 3] is positioned [e.g., on top of the coffee table].
+    - The [e.g., stack of magazines] is placed [e.g., next to the armchair on the floor].
+    - All objects are resting on a surface that appears to be [describe the floor or ground surface].
     
     Generate your detailed, single-paragraph description.
     """
@@ -93,12 +108,16 @@ for i in range(len(random_ids)):
     
     model_response = outputs[0].split('\nassistant\n', 1)[1]
 
+    print("-"*25)
+    print(model_response)
+    print("-"*25)
+
     images_html = ""
     for imagepath in images: images_html += f"""<img src="{imagepath}" style="width:200px;" alt="{imagepath}">\n"""
     output_html = f"""<pre class="pre-wrap">{model_response}</pre>"""
     body_html += images_html + f"""\n<pre class="pre-wrap">{gpt_basic_description}</pre>\n""" + f"\n<p>ID: {random_ids[i]}</p>\n" + output_html + "\n"
 
-full_html_path = "llava7_aug_desc"
+full_html_path = "tmp"
 
 gpt_basic_description = "basic_description"
 
