@@ -10,10 +10,6 @@ from PIL import Image
 random.seed(1337)
 
 
-# object_ids = [annotation['object_id'] for annotation in annotations_qa]
-# object_ids = list(set(object_ids))
-# random_id = random.choice(object_ids)
-
 os.system('export CUDA_HOME=/usr/local/cuda-12.4')
 os.system('export PATH=$CUDA_HOME/bin:$PATH')
 os.system('export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH')
@@ -54,40 +50,21 @@ for i in range(len(random_ids)):
 
     gpt_basic_description = get_gpt_answer_by_object_id(gpt4point_basic_descriptions, random_ids[i])
 
-    prompt = f"""
-    You are a meticulous and precise scene decomposition engine. Your task is to analyze the provided images and output a structured description. Do not infer, guess, or assume any information not explicitly visible in the image.
+    prompt = f"""You are a meticulous and precise visual analyst. Your task is to provide a single, factual, and objective paragraph describing the provided scene. Your description must be grounded exclusively in the visual information present in the images.
 
-    You may optionally refer to a brief supplementary description that contains human-written notes about the image. However, your output must remain grounded in visual evidence only. Use the description solely to help you disambiguate or more precisely describe what is clearly visible.
+### Guiding Principles:
+1. Describe, Don't Interpret: Report only what you see. Do not infer actions, intentions, history, or the contents of containers if they are not clearly visible. For example, if a box is closed, state that it is closed; do not guess its contents.
+2. No Speculation: Avoid making assumptions. If you are uncertain about a material, describe its visual properties (e.g., "a dark, textured wood") rather than guessing a specific type (e.g., "oak"). If you cannot identify an object with certainty, describe its shape and color.
+3. Literal and Unimaginative: Your goal is to be a camera, not a storyteller. Avoid creating a narrative or setting a mood. Stick to concrete, observable facts.
 
-    Supplementary description: "{gpt_basic_description}"
+### Reference Description:
+You are provided with the following basic description to use as a starting point. This description identifies the main subject(s).
+"{gpt_basic_description}"
 
-    ### Output Format
+### Task:
+Using the Reference Description to identify the main subjects, your task is to expand upon it. Based on the provided images and adhering strictly to the Guiding Principles above, generate a single, more detailed paragraph. Your paragraph should describe the main objects identified in the reference, their key attributes (color, shape, material, texture), and their spatial relationships to one another. The image is your sole source of truth. Focus on the primary subjects and their immediate surroundings, omitting details about the background."""
 
-    ### Object Inventory
-    List every distinct primary object in the foreground of the scene. Use precise terminology where possible (e.g., "armchair," "floor lamp," "coffee table").
-    - [Object 1 Name]
-    - [Object 2 Name]
-    - [Object 3 Name]
-    ...
-
-    ### Detailed Descriptions
-    For each object listed above, provide a detailed description of its attributes.
-    - **[Object 1 Name]:** [Describe color, shape, material, texture, state (e.g., new, dusty, chipped), and any visible text or logos. You may cross-reference `basic_desc` only if the details are visually verifiable.]
-    - **[Object 2 Name]:** [Describe its attributes.]
-    - **[Object 3 Name]:** [Describe its attributes.]
-    ...
-
-    ### Spatial Relationships
-    Describe the positions of the objects relative to each other and to the overall scene. Use clear and simple prepositions.
-    - [Object 1] is located [e.g., to the left of Object 2].
-    - [Object 3] is positioned [e.g., on top of the coffee table].
-    - The [e.g., stack of magazines] is placed [e.g., next to the armchair on the floor].
-    - All objects are resting on a surface that appears to be [describe the floor or ground surface].
-    """
-
-    question = """
-    Generate your detailed, single-paragraph description.
-    """
+    question = """Generate the detailed, single-paragraph description."""
 
     messages = [
         {

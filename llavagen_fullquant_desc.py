@@ -3,8 +3,7 @@ os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 import json
 import random
-from transformers import AutoProcessor, LlavaForConditionalGeneration, BitsAndBytesConfig
-from transformers import pipeline
+from transformers import AutoProcessor, LlavaForConditionalGeneration
 import torch
 
 random.seed(1337)
@@ -24,30 +23,34 @@ llava_processor = AutoProcessor.from_pretrained(model_id)
 
 image_names = ['000.png', '010.png', '015.png', '020.png']
 data_root = "media7link/gpt4point_test/"
-random_ids = ['ba341c4ce89647ea9f6996ec58e3eacf','8361ad3d183843e885f58d1c68720771','214671c96c5f49b2a1927d1638f0fb47','3674ea1aabf9458dadd8332872509749','e348789bde904c2c87b99aae573637e4','dec1bb1c2b85451183f33066311e73a8','d0e07b22f1d54b968943e7a896235a65','797a7dfd60534ac4956428496f2cdae1','44795759d6144f61990796c02088665f','1e488ff902e34e62affd7961c88293bb','98c29f77095b45a9ad0a4e3014d111c6','e68820e2d14a46a08e23070e28c84b7b','7c00eea07b004402ac5b63ace4b2b78f','c4a0c2e2fb624bc0af9928b0ae6407ff','44795759d6144f61990796c02088665f','73d7b6f9a0b7410b945205338b090566','44795759d6144f61990796c02088665f','d611fdfc1ce945de86fb319587c35cf1','7c00eea07b004402ac5b63ace4b2b78f','b18a7d6210ca466f9dd9ceb8e1675a58']
-body_html = ""
 
+annotations_qa_root = '/media/data7/DATASET/shapenerf_objanerf_text/spatial_gpt4point_qa/texts'
+with open(os.path.join(annotations_qa_root, 'spatial_gpt4point_qa_no_vec.json'), 'r') as f:
+    annotations_qa = json.load(f)
+object_ids = [annotation['object_id'] for annotation in annotations_qa]
+object_ids = list(set(object_ids))
 
 def load_json(file_path):
-    with open(file_path, 'r') as file:
-        return json.load(file)
+    with open(file_path, 'r') as file: return json.load(file)
 
-def get_gpt_answer_by_object_id(data, object_id):
+def get_answer_by_object_id(data, object_id):
     for item in data:
         if item["object_id"] == object_id:
             for conversation in item["conversations"]:
-                if conversation["from"] == "gpt":
-                    return conversation["value"]
-    return "Object ID not found."
+                if conversation["from"] == "gpt": return conversation["value"]
+    return "[BASIC DESCRIPTION NOT AVAILABLE, FOCUS ONLY ON THE IMAGES]"
 
 basic_object_description_path = "gpt4point_test_no_vec.json"
 gpt4point_basic_descriptions = load_json(basic_object_description_path)
 
+generated_content = []
 
-for i in range(len(random_ids)):
-    images = [os.path.join(data_root, random_ids[i], img_name) for img_name in image_names]
+# for i in range(len(random_ids)):
+for object_id in object_ids:
+    # images = [os.path.join(data_root, random_ids[i], img_name) for img_name in image_names]
+    images = [os.path.join(data_root, object_id, img_name) for img_name in image_names]
     
-    gpt_basic_description = get_gpt_answer_by_object_id(gpt4point_basic_descriptions, random_ids[i])
+    basic_description = get_answer_by_object_id(gpt4point_basic_descriptions, object_id)
 
     question = f"""You are a meticulous and precise visual analyst. Your task is to provide a single, factual, and objective paragraph describing the provided scene. Your description must be grounded exclusively in the visual information present in the images.
 
@@ -58,12 +61,12 @@ for i in range(len(random_ids)):
 
 ### Reference Description:
 You are provided with the following basic description to use as a starting point. This description identifies the main subject(s).
-"{gpt_basic_description}"
+"{basic_description}"
 
 ### Task:
 Using the Reference Description to identify the main subjects, your task is to expand upon it. Based on the provided images and adhering strictly to the Guiding Principles above, generate a single, more detailed paragraph. Your paragraph should describe the main objects identified in the reference, their key attributes (color, shape, material, texture), and their spatial relationships to one another. The image is your sole source of truth. Focus on the primary subjects and their immediate surroundings, omitting details about the background.
 
-Generate the detailed, single-paragraph description.
+Generate your detailed, single-paragraph description.
 """
 
     conversation = [
@@ -86,46 +89,28 @@ Generate the detailed, single-paragraph description.
     )
     
     # Generate with optimized parameters
-    generate_ids = llava.generate(**inputs, max_new_tokens=512, do_sample=False) # do_sample=True, temperature=0.05)
+    generate_ids = llava.generate(**inputs, max_new_tokens=512, do_sample=False)
     
     outputs = llava_processor.batch_decode(generate_ids, skip_special_tokens=True, clean_up_tokenization_spaces=False)
     
     model_response = outputs[0].split('\nassistant\n', 1)[1]
 
-    print("-"*25)
-    print(model_response)
-    print("-"*25)
+    item_data = {
+        # "item_id": random_ids[i],
+        "item_id": object_id,
+        "basic_description": basic_description,
+        "augmented_description": model_response
+    }
 
-    images_html = ""
-    for imagepath in images: images_html += f"""<img src="{imagepath}" style="width:200px;" alt="{imagepath}">\n"""
-    output_html = f"""<pre class="pre-wrap">{model_response}</pre>"""
-    body_html += images_html + f"""\n<pre class="pre-wrap">{gpt_basic_description}</pre>\n""" + f"\n<p>ID: {random_ids[i]}</p>\n" + output_html + "\n"
+    generated_content.append(item_data)
 
-full_html_path = "llava7_desc"
+output_filename = "llava7_desc"
 
-gpt_basic_description = "basic_description"
+basic_description = "BASIC_DESCRIPTION"
+generated_content_wprompt = {
+    "prompt": question,
+    "items": generated_content
+}
 
-full_html = f"""
-<!DOCTYPE html>
-<html>
-<head>
-<title>{full_html_path}</title>
-<style>
-    .pre-wrap {{
-    white-space: pre-wrap;   /* Preserves whitespace and wraps text */
-    word-wrap: break-word;   /* Ensures long words break */
-    max-width: 800px;          /* Maximum width (could also use px or rem) */
-    }}
-</style>
-</head>
-<body>
-<h2>Prompt:</h2>
-<pre class="pre-wrap">{question}</pre>
-<h2>Outputs:</h2>
-{body_html}
-</body>
-</html> 
-"""
-
-with open(f"{full_html_path}.html", "w", encoding="utf-8") as f:
-    f.write(full_html)
+with open(f"{output_filename}.json", 'w') as f:
+    json.dump(generated_content_wprompt, f, indent=2)
