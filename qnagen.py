@@ -20,7 +20,7 @@ bnb_config = BitsAndBytesConfig(
 )
 
 # load tokenizer
-tokenizer = AutoTokenizer.from_pretrained(model_id)
+tokenizer = AutoTokenizer.from_pretrained(model_id, use_fast=True)
 
 # load model with 8-bit quantization
 model = AutoModelForCausalLM.from_pretrained(
@@ -44,6 +44,7 @@ Your task is to provide three multiple choice questions and their corresponding 
 1. Use only the information explicitly present in the description to create each question and its correct answer. Don't ask question about the image background.
 2. Each question must have exactly one correct, unambiguous answer.
 3. All three answer options must be semantically distinct (e.g., avoid using "black and red" and "red and black" as separate options, since they are effectively the same).
+4. Avoid duplicate question topics. Questions should cover a variety of aspects, not just focus on a single feature or characteristic.
 
 ### Output Format
 Format each of the three questions exactly as shown below:
@@ -57,7 +58,7 @@ A: [Correct Option Number]. [Full Text of Correct Option]
 Based on the provided description and following the above guidelines and format strictly, generate three high-quality multiple choice QnAs.
 """
 
-DESCRIPTIONS_JSON_PATH = "llava7_desc.json"
+DESCRIPTIONS_JSON_PATH = "gemma27_decomposition.json"
 def load_json(file_path):
     with open(file_path, 'r') as file: return json.load(file)
 
@@ -65,9 +66,7 @@ descriptions = load_json(DESCRIPTIONS_JSON_PATH).get("items", [])
 
 body_html = ""
 
-# for item in descriptions:
-item = descriptions[0]
-for i in range(2):
+for item in descriptions:
     question = f"""Generate the QnA for the following description: {item.get("augmented_description"), ""}"""
 
     # example conversation
@@ -87,6 +86,6 @@ for i in range(2):
 prompts = [load_json(DESCRIPTIONS_JSON_PATH).get("prompt", []), prompt]
 generated_content_wqna = {"prompt" : prompts, "items": descriptions}
 
-output_filename = "llava7_desc_qna"
+output_filename = "gemma27_decomposition_qna"
 with open(f"{output_filename}.json", 'w') as f:
     json.dump(generated_content_wqna, f, indent=2)

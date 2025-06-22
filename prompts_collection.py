@@ -350,7 +350,7 @@ List every distinct primary object in the foreground of the scene. Use precise t
 
 ### Detailed Descriptions
 For each object listed above, provide a detailed description of its attributes.
-- **[Object 1 Name]:** [Describe color, shape, material, texture, state (e.g., new, dusty, chipped), and any visible text or logos. You may cross-reference `basic_desc` only if the details are visually verifiable.]
+- **[Object 1 Name]:** [Describe color, shape, material, texture, state (e.g., new, dusty, chipped), and any visible text or logos. You may cross-reference the supplementary description only if the details are visually verifiable.]
 - **[Object 2 Name]:** [Describe its attributes.]
 - **[Object 3 Name]:** [Describe its attributes.]
 ...

@@ -54,8 +54,8 @@ pre {
 
 .images-container img {
     flex: 0 0 auto;
-    max-width: 250px;
-    max-height: 250px;
+    max-width: 18%;
+    max-height: 18%;
     object-fit: contain;
     border: 1px solid #ddd;
     border-radius: 4px;

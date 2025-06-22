@@ -2,16 +2,13 @@ import os
 os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
 
 import json
-import random
 from transformers import AutoProcessor, LlavaForConditionalGeneration
 import torch
-
-random.seed(1337)
-
 
 os.system('export CUDA_HOME=/usr/local/cuda-12.4')
 os.system('export PATH=$CUDA_HOME/bin:$PATH')
 os.system('export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH')
+
 
 model_id = "llava-hf/llava-interleave-qwen-7b-hf"
 
@@ -45,9 +42,7 @@ gpt4point_basic_descriptions = load_json(basic_object_description_path)
 
 generated_content = []
 
-# for i in range(len(random_ids)):
 for object_id in object_ids:
-    # images = [os.path.join(data_root, random_ids[i], img_name) for img_name in image_names]
     images = [os.path.join(data_root, object_id, img_name) for img_name in image_names]
     
     basic_description = get_answer_by_object_id(gpt4point_basic_descriptions, object_id)
@@ -96,7 +91,6 @@ Generate your detailed, single-paragraph description.
     model_response = outputs[0].split('\nassistant\n', 1)[1]
 
     item_data = {
-        # "item_id": random_ids[i],
         "item_id": object_id,
         "basic_description": basic_description,
         "augmented_description": model_response
@@ -108,7 +102,7 @@ output_filename = "llava7_desc"
 
 basic_description = "BASIC_DESCRIPTION"
 generated_content_wprompt = {
-    "prompt": question,
+    "prompt": [question],
     "items": generated_content
 }
 
