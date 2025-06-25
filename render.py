@@ -1,7 +1,6 @@
 import json
 from flask import Flask, render_template
 import os
-import re
 
 # Initialize the Flask application
 app = Flask(__name__)
@@ -47,46 +46,6 @@ def render_page(model_name: str = 'llava7'):
         page_title=page_title,
         item_list=item_list
     )
-
-
-@app.route('/differences')
-def render_differences():
-    with open("desc_differences.json", 'r') as f:
-        data = json.load(f)
-
-    data_root = "media7link/gpt4point_test/"
-    image_names = ['000.png', '010.png', '015.png', '020.png']
-
-    # Loop through each item in the list and add its image path
-    for item in data:
-        item_id = item.get('item_id')
-        if item_id:
-            item['image_path'] = [os.path.join(data_root, item_id ,img_name) for img_name in image_names]
-        else:
-            item['image_path'] = ''
-        
-        item_diffs = item.get('differences')
-
-        pattern = re.compile(r"Description 1 with Highlights:\s*(.*?)\s*Description 2 with Highlights:\s*(.*)")
-        match = pattern.search(item_diffs)
-
-        if match:
-            between_patterns = match.group(1)
-            after_pattern2 = match.group(2)
-
-            item['desc_1'] = between_patterns
-            item['desc_2'] = after_pattern2
-        else:
-            item['desc_1'] = "PATTERN NOT FOUND IN THE STRING"
-            item['desc_2'] = "PATTERN NOT FOUND IN THE STRING"
-
-
-    # Unpack the data and pass it to the template with specific names
-    return render_template(
-        'differences.html', 
-        item_list=data
-    )
-
 
 
 if __name__ == '__main__':
