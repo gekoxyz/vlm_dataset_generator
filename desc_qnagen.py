@@ -43,8 +43,8 @@ Your task is to provide three multiple choice questions and their corresponding 
 ### Guidelines
 1. Use only the information explicitly present in the description to create each question and its correct answer. Don't ask question about the image background.
 2. Each question must have exactly one correct, unambiguous answer.
-3. All three answer options must be semantically distinct (e.g., avoid using "black and red" and "red and black" as separate options, since they are effectively the same).
-4. Avoid duplicate question topics. Questions should cover a variety of aspects, not just focus on a single feature or characteristic.
+3. All three answer options must be semantically distinct (e.g., avoid using both "black and red" and "red and black" as options).
+4. Avoid duplicate question topics. Questions should cover a variety of aspects of the scene, especially about spatial features, like the color or positions of parts of the objects in the scene.
 
 ### Output Format
 Format each of the three questions exactly as shown below:
@@ -55,14 +55,14 @@ Q: [Your Question Text Here]
 A: [Correct Option Number]. [Full Text of Correct Option]
 
 ### Task
-Based on the provided description and following the above guidelines and format strictly, generate three high-quality multiple choice QnAs.
+Based on the provided description and following the above guidelines and format, generate three high-quality multiple choice QnAs.
 """
 
-DESCRIPTIONS_JSON_PATH = "gemma27_decomposition.json"
+DESCRIPTIONS_JSON_PATH = "gemma27_desc"
 def load_json(file_path):
     with open(file_path, 'r') as file: return json.load(file)
 
-descriptions = load_json(DESCRIPTIONS_JSON_PATH).get("items", [])
+descriptions = load_json(f"{DESCRIPTIONS_JSON_PATH}.json").get("items", [])
 
 body_html = ""
 
@@ -83,9 +83,8 @@ for item in descriptions:
 
     item["generated_qnas"] = outputs[0]["generated_text"][2]["content"]
 
-prompts = [load_json(DESCRIPTIONS_JSON_PATH).get("prompt", []), prompt]
+prompts = [load_json(f"{DESCRIPTIONS_JSON_PATH}.json").get("prompt", []), prompt]
 generated_content_wqna = {"prompt" : prompts, "items": descriptions}
 
-output_filename = "gemma27_decomposition_qna"
-with open(f"{output_filename}.json", 'w') as f:
+with open(f"{DESCRIPTIONS_JSON_PATH}_qna.json", 'w') as f:
     json.dump(generated_content_wqna, f, indent=2)

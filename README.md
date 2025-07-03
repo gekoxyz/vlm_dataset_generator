@@ -11,3 +11,8 @@ The you can connect to `localhost:1337/llava7` to render the generated captions 
 The json outputs of the experiments are in `llava7_desc_qna.json`.
 
 A collection of the prompts used for the project can be found in `prompts_collection.py`.
+
+---
+
+### Files for 20250708
+`gemma27_desc_qna.json`

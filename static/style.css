@@ -34,41 +34,6 @@ pre {
     font-size: 0.9em;
 }
 
-.item-container {
-    margin-bottom: 30px;
-    border-bottom: 1px solid #ddd;
-    padding-bottom: 20px;
-}
-
-.item-container:last-child {
-    border-bottom: none;
-}
-
-.images-container {
-    display: flex;
-    gap: 10px;
-    margin: 15px 0;
-    overflow-x: auto;
-    padding: 5px 0;
-}
-
-.images-container img {
-    flex: 0 0 auto;
-    max-width: 20%;
-    max-height: 20%;
-    object-fit: contain;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-}
-
-.item-id {
-    font-family: monospace;
-    color: #666;
-    font-size: 0.8em;
-    display: block;
-    margin: 5px 0;
-}
-
 main {
     max-width: 100%;
 }
@@ -82,4 +47,93 @@ main {
         max-width: 150px;
         max-height: 150px;
     }
+}
+
+.item-container {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    min-height: 200px;
+}
+
+.loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100px;
+    color: #666;
+    font-style: italic;
+}
+
+.spinner {
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #3498db;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+    margin-right: 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.images-container img {
+    max-width: 200px;
+    margin: 5px;
+    border-radius: 4px;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+}
+
+.images-container img.loaded {
+    opacity: 1;
+}
+
+.item-id {
+    font-weight: bold;
+    color: #2c3e50;
+    display: block;
+    margin: 10px 0;
+}
+
+.error {
+    color: #e74c3c;
+    font-style: italic;
+}
+
+/* Skeleton loading animation */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: loading 1.5s infinite;
+}
+
+@keyframes loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-image {
+    width: 200px;
+    height: 150px;
+    margin: 5px;
+    border-radius: 4px;
+}
+
+.skeleton-text {
+    height: 20px;
+    margin: 10px 0;
+    border-radius: 4px;
+}
+
+.skeleton-text.short {
+    width: 60%;
+}
+
+.skeleton-text.long {
+    width: 90%;
 }

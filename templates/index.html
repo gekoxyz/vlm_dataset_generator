@@ -13,23 +13,16 @@
         <main>
             {% if item_list %}
                 {% for item in item_list %}
-                    <div class="item-container">
-                        <!-- Display image if available -->
-                        {% if item.image_path %}
-                            <div class="images-container">
-                                <!-- Loop through each individual image path in the list -->
-                                {% for single_image_path in item.image_path %}
-                                    <img src="{{ url_for('static', filename=single_image_path) }}" alt="Image for item {{ item.item_id }}">
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            <div>No images available</div>
-                        {% endif %}
-                        
-                        <pre>{{ item.basic_description }}</pre>
-                        <span class="item-id">{{ item.item_id }}</span>
-                        <pre>{{ item.augmented_description }}</pre>
-                        <pre>{{ item.generated_qnas}}</pre>
+                    <div class="item-container" data-item-id="{{ item.item_id }}">
+                        <div class="loading-placeholder">
+                            <div class="skeleton skeleton-image"></div>
+                            <div class="skeleton skeleton-image"></div>
+                            <div class="skeleton skeleton-image"></div>
+                            <div class="skeleton skeleton-image"></div>
+                            <div class="skeleton skeleton-text short"></div>
+                            <div class="skeleton skeleton-text long"></div>
+                            <div class="skeleton skeleton-text long"></div>
+                        </div>
                     </div>
                 {% endfor %}
             {% else %}
@@ -37,5 +30,156 @@
             {% endif %}
         </main>
     </div>
+
+    <script>
+        const BATCH_SIZE = 3;
+        const VIEWPORT_THRESHOLD = 50; // Load when item is 50px from viewport
+        
+        let loadedItems = new Set();
+        let isLoading = false;
+        let itemQueue = [];
+        
+        // get model name from URL
+        const modelName = window.location.pathname.split('/').pop() || '';
+        
+        // Intersection Observer for lazy loading
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const itemId = entry.target.dataset.itemId;
+                    if (!loadedItems.has(itemId) && itemQueue.indexOf(itemId) === -1) {
+                        itemQueue.push(itemId);
+                    }
+                }
+            });
+            
+            // Process queue if not already loading
+            if (itemQueue.length > 0 && !isLoading) {
+                processQueue();
+            }
+        }, {
+            rootMargin: `${VIEWPORT_THRESHOLD}px`
+        });
+        
+        // Observe all item containers
+        document.querySelectorAll('.item-container').forEach(container => {
+            observer.observe(container);
+        });
+        
+        async function processQueue() {
+            if (isLoading || itemQueue.length === 0) return;
+            
+            isLoading = true;
+            
+            // Take batch from queue
+            const batch = itemQueue.splice(0, BATCH_SIZE);
+            
+            try {
+                // Show loading state for batch items
+                batch.forEach(itemId => {
+                    const container = document.querySelector(`[data-item-id="${itemId}"]`);
+                    if (container) {
+                        showLoadingSpinner(container);
+                    }
+                });
+                
+                // Fetch batch data
+                const response = await fetch(`/api/items?model=${modelName}&${batch.map(id => `ids=${id}`).join('&')}`);
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const items = await response.json();
+                
+                // Render each item
+                items.forEach(item => {
+                    renderItem(item);
+                    loadedItems.add(item.item_id);
+                });
+                
+            } catch (error) {
+                console.error('Error loading items:', error);
+                // Show error for failed items
+                batch.forEach(itemId => {
+                    if (!loadedItems.has(itemId)) {
+                        showError(itemId, 'Failed to load item');
+                    }
+                });
+            } finally {
+                isLoading = false;
+                
+                // Process remaining queue
+                if (itemQueue.length > 0) {
+                    setTimeout(processQueue, 100);
+                }
+            }
+        }
+        
+        function showLoadingSpinner(container) {
+            const placeholder = container.querySelector('.loading-placeholder');
+            if (placeholder) {
+                placeholder.innerHTML = `
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        Loading item ${container.dataset.itemId}...
+                    </div>
+                `;
+            }
+        }
+        
+        function renderItem(item) {
+            const container = document.querySelector(`[data-item-id="${item.item_id}"]`);
+            if (!container) return;
+            
+            const html = `
+                <div class="images-container">
+                    ${item.image_path ? item.image_path.map(imagePath => 
+                        `<img src="/static/${imagePath}" alt="Image for item ${item.item_id}" loading="lazy">`
+                    ).join('') : '<div>No images available</div>'}
+                </div>
+                <pre>${item.basic_description || ''}</pre>
+                <span class="item-id">${item.item_id}</span>
+                <pre>${item.augmented_description || ''}</pre>
+                <pre>${item.generated_qnas || ''}</pre>
+            `;
+            
+            container.innerHTML = html;
+            
+            // Handle image loading
+            const images = container.querySelectorAll('img');
+            images.forEach(img => {
+                img.onload = function() {
+                    this.classList.add('loaded');
+                };
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    console.warn(`Failed to load image: ${this.src}`);
+                };
+            });
+        }
+        
+        function showError(itemId, message) {
+            const container = document.querySelector(`[data-item-id="${itemId}"]`);
+            if (container) {
+                container.innerHTML = `
+                    <div class="error">
+                        <span class="item-id">${itemId}</span>
+                        <p>Error: ${message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        // Preload items that are immediately visible
+        window.addEventListener('load', () => {
+            // Force check for immediately visible items
+            setTimeout(() => {
+                if (itemQueue.length > 0) {
+                    processQueue();
+                }
+            }, 100);
+        });
+    </script>
 </body>
 </html>
