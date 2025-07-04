@@ -15,4 +15,10 @@ A collection of the prompts used for the project can be found in `prompts_collec
 ---
 
 ### Files for 20250708
-`gemma27_desc_qna.json`
+
+The min pages are the most "interesting" (minimal set of the best) scenes. The other ones are less interesting in general.
+
+Detailed descriptions
+`http://localhost:1337/min_gemma27_desc`
+Detailed decomposition
+`http://localhost:1337/min_gemma27_deco`
