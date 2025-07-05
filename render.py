@@ -9,6 +9,34 @@ def load_items(json_path):
     with open(json_path, 'r') as f:
         data = json.load(f)
         return data
+    
+
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+
+@app.route('/llava7_desc')
+def render_llava7():
+    generated_data = load_items(f"llava7_desc_qna.json")
+    if not generated_data: generated_data = {'prompt': 'Error: Could not load data.', 'items': []}
+    
+    # For initial page load, only send basic item info without heavy content
+    item_list = generated_data.get('items', [])
+    page_title = generated_data.get('prompt')
+
+    # Sort items by item_id
+    item_list.sort(key=lambda item: item['item_id'])
+
+    # Only send item_ids and basic info for initial load
+    initial_items = [{'item_id': item.get('item_id')} for item in item_list]
+
+    return render_template(
+        'display.html', 
+        page_title = page_title,
+        item_list = initial_items,
+        model_name = f"llava7_desc_qna"
+    )
 
 
 @app.route('/gemma27_<prompt_type>')
@@ -28,7 +56,7 @@ def render_gemma27(prompt_type = "desc"):
     initial_items = [{'item_id': item.get('item_id')} for item in item_list]
 
     return render_template(
-        'index.html', 
+        'display.html', 
         page_title = page_title,
         item_list = initial_items,
         model_name = f"gemma27_{prompt_type}"
@@ -64,28 +92,37 @@ BEST_OBJECTS = [
     "ff1c458022734dbda358ab2f73a62fa2"
 ] 
 
-@app.route('/min_gemma27_<prompt_type>')
-def render_min_gemma27(prompt_type):
+@app.route('/min_<model>_<prompt_type>')
+@app.route('/old_min_gemma27_<prompt_type>', defaults={'model': 'gemma27', 'is_old': True})
+def render_model_output(model, prompt_type="desc", is_old=False):
+    if is_old:
+        filename = f"old_{model}_{prompt_type}_qna.json"
+    else:
+        filename = f"{model}_{prompt_type}_qna.json"
 
-    generated_data = load_items(f"gemma27_{prompt_type}_qna.json")
-    if not generated_data: generated_data = {'prompt': 'Error: Could not load data.', 'items': []}
+    generated_data = load_items(filename)
+    
+    if not generated_data:
+        generated_data = {'prompt': f'Error: Could not load data from {filename}', 'items': []}
     
     item_list = generated_data.get('items', [])
     page_title = generated_data.get('prompt')
 
+    # This part of the logic remains the same
     data_root = "media7link/gpt4point_test/"
     image_names = ['000.png', '010.png', '015.png', '020.png']
 
     best_objects = []
 
+    # Make sure we don't error out if an item is not found
     for object_id in BEST_OBJECTS:
-        found_item = next((item for item in item_list if item['item_id'] == object_id), None)
-        found_item['image_path'] = [os.path.join(data_root, object_id, img_name) for img_name in image_names]
-        best_objects.append(found_item)
+        found_item = next((item for item in item_list if item.get('item_id') == object_id), None)
+        if found_item:
+            found_item['image_path'] = [os.path.join(data_root, object_id, img_name) for img_name in image_names]
+            best_objects.append(found_item)
 
     best_objects.sort(key=lambda item: item['item_id'])
 
-    # Unpack the data and pass it to the template with specific names
     return render_template(
         'min.html', 
         page_title=page_title,

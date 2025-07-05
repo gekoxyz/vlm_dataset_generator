@@ -58,7 +58,7 @@ A: [Correct Option Number]. [Full Text of Correct Option]
 Based on the provided description and following the above guidelines and format, generate three high-quality multiple choice QnAs.
 """
 
-DESCRIPTIONS_JSON_PATH = "gemma27_desc"
+DESCRIPTIONS_JSON_PATH = "llava7_desc"
 def load_json(file_path):
     with open(file_path, 'r') as file: return json.load(file)
 
