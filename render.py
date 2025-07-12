@@ -16,6 +16,37 @@ def index():
     return render_template('index.html')
 
 
+@app.route('/smol_<version>')
+def smol(version = "v1"):
+    generated_data = load_items(f"smol_{version}_qna.json")
+    
+    if not generated_data: generated_data = {'prompt': f'Error: Could not load data from smol.json', 'items': []}
+    
+    item_list = generated_data.get('items', [])
+    page_title = generated_data.get('prompt')
+
+    # This part of the logic remains the same
+    data_root = "media7link/gpt4point_test/"
+    image_names = ['000.png', '010.png', '015.png', '020.png']
+
+    best_objects = []
+
+    # Make sure we don't error out if an item is not found
+    for object_id in BEST_OBJECTS:
+        found_item = next((item for item in item_list if item.get('item_id') == object_id), None)
+        if found_item:
+            found_item['image_path'] = [os.path.join(data_root, object_id, img_name) for img_name in image_names]
+            best_objects.append(found_item)
+
+    best_objects.sort(key=lambda item: item['item_id'])
+
+    return render_template(
+        'min.html', 
+        page_title=page_title,
+        item_list=best_objects
+    )
+
+
 @app.route('/llava7_desc')
 def render_llava7():
     generated_data = load_items(f"llava7_desc_qna.json")

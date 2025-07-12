@@ -1,21 +1,31 @@
 import os
 import json
-from transformers import AutoProcessor, Gemma3ForConditionalGeneration
+from transformers import AutoProcessor, Gemma3ForConditionalGeneration, BitsAndBytesConfig
 import torch
 from PIL import Image
+from tqdm import tqdm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3"
-
-os.system('export CUDA_HOME=/usr/local/cuda-12.4')
-os.system('export PATH=$CUDA_HOME/bin:$PATH')
-os.system('export LD_LIBRARY_PATH=$CUDA_HOME/lib64:$LD_LIBRARY_PATH')
+os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+os.environ['CUDA_HOME'] = '/usr/local/cuda-12.4'
+os.environ['PATH'] = f"{os.environ['CUDA_HOME']}/bin:{os.environ['PATH']}"
+os.environ['LD_LIBRARY_PATH'] = f"{os.environ['CUDA_HOME']}/lib64:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
 torch.set_float32_matmul_precision('high')
 
 model_id = "google/gemma-3-27b-it"
 
+print("Loading model...")
+
+bnb_config = BitsAndBytesConfig(
+    load_in_8bit=True,
+)
+
 model = Gemma3ForConditionalGeneration.from_pretrained(
-    model_id, torch_dtype=torch.bfloat16, low_cpu_mem_usage=True, device_map="auto"
+    model_id, 
+    torch_dtype=torch.bfloat16, 
+    low_cpu_mem_usage=True, 
+    device_map="auto",
+    quantization_config=bnb_config
 ).eval()
 
 processor = AutoProcessor.from_pretrained(model_id, use_fast=True)
@@ -57,11 +67,18 @@ You may optionally refer to the supplementary description below to disambiguate 
 
 Supplementary description: "{basic_description}"
 
-### Output Format
+## Disambiguation of Similar Objects
+To avoid ambiguity, you **must not** use generic numbered labels like "Object 1" or "Object 2". Instead, you must create a descriptive name for each instance that uniquely identifies it based on its most obvious spatial relationship to another, unambiguous object in the scene.
+If no such unique relational description is possible (e.g. two objects near to each other), you may describe them as a single group (e.g. "a pair of shoes", "two stones").
+
+## Primary Objects
+Primary Objects refer to the major components described in the scene that can be independently segmented or referenced. These are distinct from minor elements or attached parts unless those parts are significant because they are not usually like that in the object (e.g. a detached wheel from a car would be primary, but a car's attached wheel would not).
+
+## Output Format
 
 ### Object Inventory  
 
-List every distinct, clearly visible, primary object in the foreground of the scene. Use precise terminology (e.g., "armchair," "floor lamp," "coffee table"). Only include objects that are sufficiently visible to describe in detail. Don't make the decompositions too fine or coarse.
+List every distinct, clearly visible, Primary Object in the foreground of the scene. Use precise terminology.
 - [Object 1 Name]  
 - [Object 2 Name]  
 - [Object 3 Name]  
@@ -69,13 +86,9 @@ List every distinct, clearly visible, primary object in the foreground of the sc
 
 ### Detailed Descriptions  
 For each object listed above, describe the following attributes if they are visible:  
-- Color  
 - Shape  
-- Material  
-- Texture  
-- State (e.g. new, worn, dusty, chipped)  
-- Any visible markings, text, or logos  
-- Number of components (e.g. sandwich with 4 bread slices, pizza with 12 pepperoni, office floor with 4 chairs)
+- Number of identical repeating elements (e.g., if a pattern repeats 5 times, or if the object contains 3 identical buttons)
+- Visible features such as markings, text, or logos  
 
 If an attribute is not visually verifiable, omit it rather than speculate. Refer to the supplementary description only to resolve naming ambiguities when the visual evidence supports it.
 
@@ -84,18 +97,13 @@ If an attribute is not visually verifiable, omit it rather than speculate. Refer
 ...
 
 ### Spatial Relationships  
-Describe the spatial layout and relative positions of the objects listed above using **the reference frame of each object**. This means describing other objects relative to how they would appear **from the point of view of the object itself**, rather than from the viewer/camera perspective.
+Describe the spatial layout and relative positions of the Primary Objects listed above using the reference frame of each Primary Object. This means describing other objects relative to how they would appear from the point of view of the Primary Object itself, and not from the image perspective.
 
-Use clear and consistent prepositions (e.g., "to the left of," "on top of," "behind") relative to the object's orientation. If an object has an identifiable front, sides, or top/bottom based on its form, use that intrinsic orientation to describe spatial relationships.
+Use clear and consistent prepositions (e.g. "to the left of," "on top of," "behind") relative to the object's orientation. If an object has an identifiable front, sides, or top/bottom based on its form, use that intrinsic orientation to describe spatial relationships.
 
-Include both pairwise relationships and global placements within the scene. If an object appears in multiple positions (e.g., stacked, grouped), describe that clearly.
+Include both pairwise relationships and global placements within the scene. If an object appears in multiple positions (e.g. stacked, grouped), describe that clearly.
 
-- [Object 1] has [Object 2] to its left (from Object 1's point of view).  
-- [Object 3] rests on top of [Object 4], centered relative to its upper surface.  
-- The [Object 5] is positioned along the back-left corner when considering its own front-facing side.  
-...
-
-Be unambiguous and specific. Prioritize spatial relationships that are important for understanding the physical layout of the scene and how objects are arranged relative to each other from their own orientations.
+Be unambiguous and specific. Prioritize spatial relationships between Primary Objects that are important for understanding the physical layout of the scene.
 """
 
     question = """Please analyze the scene using the given instructions."""
@@ -122,7 +130,7 @@ Be unambiguous and specific. Prioritize spatial relationships that are important
     inputs = inputs.to(model.device)
 
     with torch.inference_mode():
-        generation = model.generate(**inputs, max_new_tokens=512, do_sample=False)
+        generation = model.generate(**inputs, max_new_tokens=1024, do_sample=False)
 
     decoded = processor.decode(generation[0], skip_special_tokens=True)
     model_response = decoded.split('\nmodel\n', 1)[1]
@@ -134,7 +142,7 @@ Be unambiguous and specific. Prioritize spatial relationships that are important
     }
     generated_content.append(item_data)
 
-output_filename = "gemma27_decoCOUNTER"
+output_filename = "gemma27_decov5"
 
 basic_description = "BASIC_DESCRIPTION"
 generated_content_wprompt = {

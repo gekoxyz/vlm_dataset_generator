@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LLaVA Interleave generation</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <h1>Prompt:</h1>
+        {% for prompt in page_title %}
+        <pre>{{ prompt }}</pre>
+        {% endfor %}
+        <main>
+            {% if item_list %}
+                {% for item in item_list %}
+                    <div class="item-container">
+                        <!-- Display image if available -->
+                        {% if item.image_path %}
+                            <div class="images-container">
+                                <!-- Loop through each individual image path in the list -->
+                                {% for single_image_path in item.image_path %}
+                                    <img src="{{ url_for('static', filename=single_image_path) }}" alt="Image for item {{ item.item_id }}">
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div>No images available</div>
+                        {% endif %}
+                        
+                        <pre>{{ item.basic_description }}</pre>
+                        <span class="item-id">{{ item.item_id }}</span>
+                        <pre>{{ item.augmented_description }}</pre>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No items could be loaded.</p>
+            {% endif %}
+        </main>
+    </div>
+</body>
+</html>
