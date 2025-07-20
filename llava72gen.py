@@ -1,34 +1,39 @@
 import os
-import json
-from transformers import AutoProcessor, Gemma3ForConditionalGeneration, BitsAndBytesConfig
-import torch
+os.environ["CUDA_VISIBLE_DEVICES"] = "2,3"
+
+MODEL_PATH = "/media/data2/mgaliazzo/"
+os.environ['HF_HOME'] = MODEL_PATH
+os.environ['HF_DATASETS_CACHE'] = MODEL_PATH
+os.environ['TRANSFORMERS_CACHE'] = MODEL_PATH
+
 from PIL import Image
+import json
 from tqdm import tqdm
 
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1"
+import torch
+from transformers import AutoProcessor, LlavaOnevisionForConditionalGeneration, BitsAndBytesConfig
+
 os.environ['CUDA_HOME'] = '/usr/local/cuda-12.4'
 os.environ['PATH'] = f"{os.environ['CUDA_HOME']}/bin:{os.environ['PATH']}"
 os.environ['LD_LIBRARY_PATH'] = f"{os.environ['CUDA_HOME']}/lib64:{os.environ.get('LD_LIBRARY_PATH', '')}"
 
-torch.set_float32_matmul_precision('high')
-
-model_id = "google/gemma-3-27b-it"
-
-print("Loading model...")
-
+model_id = "llava-hf/llava-onevision-qwen2-72b-ov-hf"
 bnb_config = BitsAndBytesConfig(
-    load_in_8bit=True,
+    load_in_4bit=True,
+    bnb_4bit_quant_type="nf4",
+    bnb_4bit_compute_dtype=torch.bfloat16,
+    bnb_4bit_use_double_quant=True
 )
 
-model = Gemma3ForConditionalGeneration.from_pretrained(
+model = LlavaOnevisionForConditionalGeneration.from_pretrained(
     model_id, 
-    torch_dtype=torch.bfloat16, 
+    torch_dtype=torch.float16, 
     low_cpu_mem_usage=True, 
-    device_map="auto",
-    quantization_config=bnb_config
-).eval()
+    quantization_config=bnb_config,
+    device_map="auto"
+)
 
-processor = AutoProcessor.from_pretrained(model_id, use_fast=True)
+processor = AutoProcessor.from_pretrained(model_id)
 
 image_names = ['000.png', '010.png', '015.png', '020.png']
 data_root = "media7link/gpt4point_test/"
@@ -87,17 +92,18 @@ for object_id in tqdm(object_ids):
     prompt = f"""You are a meticulous and precise visual analyst. Your task is to generate a single, factual, and objective paragraph describing a scene. The description's primary focus must be the spatial arrangement of the objects within it.
 
 ### Core Principles:
-1.  **Describe, Don't Interpret:** Report only what you see. Do not infer actions, intentions, or history. Stick to concrete, observable facts.
-2.  **Focus on Spatial Relationships:** While object attributes like color and shape are important for identification, the paragraph must be structured around *where things are* in relation to one another. Use clear prepositions (e.g., "to the left of," "on top of," "in front of," "next to").
-3.  **Define Primary Objects:** A "Primary Object" is a major, distinct, and conceptually whole item in the scene. Do **not** describe standard, attached parts (like a car's wheels or a door's handle) as separate objects. A detached part, however, would be a Primary Object. This prevents trivial observations.
-4.  **Disambiguate Similar Objects:** If the scene contains multiple similar objects, you **must** distinguish them using their spatial relationship to a unique, anchor object. For example, use "the book to the left of the lamp" and "the book on top of the box." **Never** use generic labels like "Object 1" or "the first object."
+1.  Describe, Don't Interpret: Report only what you see. Do not infer actions, intentions, or history. Stick to concrete, observable facts.
+2.  Focus on Spatial Relationships: While object attributes like color and shape are important for identification, the paragraph must be structured around *where things are* in relation to one another. Use clear prepositions (e.g. "on top of", "in front of", "next to") without using ambiguous terms such as "to the left/right of".
+3. No Speculation: Avoid making assumptions. If you are uncertain about a material, describe its visual properties (e.g. "a dark, textured wood") rather than guessing a specific type (e.g. "oak"). If you cannot identify an object with certainty, describe its shape and color.
+4. Literal and Unimaginative: Your goal is to be a camera, not a storyteller. Avoid creating a narrative or setting a mood. Stick to concrete, observable facts.
 
 ### Reference Description:
 You may be provided with a basic description to identify the main subject(s). Use this to ground your description, but the image is your sole source of truth.
 {basic_description}
 
 ### Task:
-Based on the provided image(s) and the principles above, generate a single, detailed paragraph. The paragraph should identify the Primary Objects, their key visual attributes for identification, and, most importantly, their spatial layout and relationships to each other."""
+Based on the provided image(s) and the principles above, generate a single, detailed paragraph. The paragraph should identify the Primary Objects, their key visual attributes for identification, and, most importantly, their spatial layout and relationships to each other.
+Please analyze the scene using the given instructions."""
 
     question = """Please analyze the scene using the given instructions."""
 
@@ -120,13 +126,12 @@ Based on the provided image(s) and the principles above, generate a single, deta
         messages, add_generation_prompt=True, tokenize=True,
         return_dict=True, return_tensors="pt"
     )
-    inputs = inputs.to(model.device)
 
     with torch.inference_mode():
         generation = model.generate(**inputs, max_new_tokens=1024, do_sample=False)
 
     decoded = processor.decode(generation[0], skip_special_tokens=True)
-    model_response = decoded.split('\nmodel\n', 1)[1]
+    model_response = decoded.split('Please analyze the scene using the given instructions.assistant\n',1)[1]
 
     item_data = {
         "item_id": object_id,
@@ -135,7 +140,7 @@ Based on the provided image(s) and the principles above, generate a single, deta
     }
     generated_content.append(item_data)
 
-output_filename = "gemma27_decogem"
+output_filename = "llava72_desc_NEW"
 
 basic_description = "BASIC_DESCRIPTION"
 generated_content_wprompt = {

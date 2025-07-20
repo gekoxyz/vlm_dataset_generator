@@ -28,8 +28,11 @@
                         
                         <pre>{{ item.basic_description }}</pre>
                         <span class="item-id">{{ item.item_id }}</span>
-                        <pre>{{ item.augmented_description }}</pre>
-                        <pre>{{ item.generated_qnas}}</pre>
+                        <button onclick="hideShowDesc()">Hide/Show description</button>
+                        <pre id="descpre" style="display:none;">{{ item.augmented_description }}</pre>
+                        <button onclick="hideShowQna()">Hide/Show QnA</button>
+                        <pre id="qnapre" style="display:none;">{{ item.generated_qnas }}</pre>
+                        <pre>{{ item.clean_qnas }}</pre>
                     </div>
                 {% endfor %}
             {% else %}
@@ -37,5 +40,24 @@
             {% endif %}
         </main>
     </div>
+    <script>
+        function hideShowDesc() {
+            var x = document.getElementById("descpre");
+            if (x.style.display === "none") {
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+        } 
+
+        function hideShowQna() {
+            var x = document.getElementById("qnapre");
+            if (x.style.display === "none") {
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+        } 
+    </script>
 </body>
 </html>
